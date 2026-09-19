@@ -1,0 +1,241 @@
+diff --git a/flutter/lib/common.dart b/flutter/lib/common.dart
+index 1651f67..164e3fb 100644
+--- a/flutter/lib/common.dart
++++ b/flutter/lib/common.dart
+@@ -250,10 +250,10 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
+ class MyTheme {
+   MyTheme._();
+ 
+-  static const Color grayBg = Color(0xFFEFEFF2);
+-  static const Color accent = Color(0xFF0071FF);
+-  static const Color accent50 = Color(0x770071FF);
+-  static const Color accent80 = Color(0xAA0071FF);
++  static const Color grayBg = Color(0xFFF5F7FA); // DreamDesk: lighter
++  static const Color accent = Color(0xFF3E7BFA); // DreamDesk: ToDesk blue
++  static const Color accent50 = Color(0x773E7BFA);
++  static const Color accent80 = Color(0xAA3E7BFA);
+   static const Color canvasColor = Color(0xFF212121);
+   static const Color border = Color(0xFFCCCCCC);
+   static const Color idColor = Color(0xFF00B6F0);
+diff --git a/flutter/lib/desktop/pages/connection_page.dart b/flutter/lib/desktop/pages/connection_page.dart
+index 7af8c99..b866406 100644
+--- a/flutter/lib/desktop/pages/connection_page.dart
++++ b/flutter/lib/desktop/pages/connection_page.dart
+@@ -517,18 +517,24 @@ class _ConnectionPageState extends State<ConnectionPage>
+               padding: const EdgeInsets.only(top: 13.0),
+               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                 SizedBox(
+-                  height: 28.0,
++                  height: 40.0,
++                  width: 132.0,
+                   child: ElevatedButton(
++                    style: ElevatedButton.styleFrom(
++                      shape: RoundedRectangleBorder(
++                          borderRadius: BorderRadius.circular(8)),
++                    ),
+                     onPressed: () {
+                       onConnect();
+                     },
+-                    child: Text(translate("Connect")),
++                    child: Text(translate("Connect"),
++                        style: const TextStyle(fontSize: 15)),
+                   ),
+                 ),
+                 const SizedBox(width: 8),
+                 Container(
+-                  height: 28.0,
+-                  width: 28.0,
++                  height: 40.0,
++                  width: 40.0,
+                   decoration: BoxDecoration(
+                     border: Border.all(color: Theme.of(context).dividerColor),
+                     borderRadius: BorderRadius.circular(8),
+@@ -541,9 +547,9 @@ class _ConnectionPageState extends State<ConnectionPage>
+                               child: _menuOpen.value
+                                   ? Transform.rotate(
+                                       angle: pi,
+-                                      child: Icon(IconFont.more, size: 14),
++                                      child: Icon(IconFont.more, size: 16),
+                                     )
+-                                  : Icon(IconFont.more, size: 14),
++                                  : Icon(IconFont.more, size: 16),
+                               onTapDown: (e) {
+                                 offset = e.globalPosition;
+                               },
+diff --git a/flutter/lib/desktop/pages/desktop_home_page.dart b/flutter/lib/desktop/pages/desktop_home_page.dart
+index 42ec100..62b72bf 100644
+--- a/flutter/lib/desktop/pages/desktop_home_page.dart
++++ b/flutter/lib/desktop/pages/desktop_home_page.dart
+@@ -227,23 +227,50 @@ class _DesktopHomePageState extends State<DesktopHomePage>
+                     ),
+                   ),
+                   Flexible(
+-                    child: GestureDetector(
+-                      onDoubleTap: () {
+-                        Clipboard.setData(
+-                            ClipboardData(text: model.serverId.text));
+-                        showToast(translate("Copied"));
+-                      },
+-                      child: TextFormField(
+-                        controller: model.serverId,
+-                        readOnly: true,
+-                        decoration: InputDecoration(
+-                          border: InputBorder.none,
+-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
++                    child: Row(
++                      crossAxisAlignment: CrossAxisAlignment.center,
++                      children: [
++                        Expanded(
++                          child: GestureDetector(
++                            onDoubleTap: () {
++                              Clipboard.setData(
++                                  ClipboardData(text: model.serverId.text));
++                              showToast(translate("Copied"));
++                            },
++                            child: TextFormField(
++                              controller: model.serverId,
++                              readOnly: true,
++                              decoration: InputDecoration(
++                                border: InputBorder.none,
++                                contentPadding:
++                                    EdgeInsets.only(top: 10, bottom: 10),
++                              ),
++                              style: TextStyle(
++                                fontSize: 22,
++                              ),
++                            ).workaroundFreezeLinuxMint(),
++                          ),
+                         ),
+-                        style: TextStyle(
+-                          fontSize: 22,
++                        InkWell(
++                          child: Tooltip(
++                            message: translate('Copy'),
++                            child: Icon(
++                              Icons.copy,
++                              size: 18,
++                              color: Theme.of(context)
++                                  .textTheme
++                                  .titleLarge
++                                  ?.color
++                                  ?.withOpacity(0.55),
++                            ).marginOnly(left: 6, top: 2, right: 2),
++                          ),
++                          onTap: () {
++                            Clipboard.setData(
++                                ClipboardData(text: model.serverId.text));
++                            showToast(translate("Copied"));
++                          },
+                         ),
+-                      ).workaroundFreezeLinuxMint(),
++                      ],
+                     ),
+                   )
+                 ],
+@@ -342,6 +369,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
+                           ).workaroundFreezeLinuxMint(),
+                         ),
+                       ),
++                      InkWell(
++                        child: Tooltip(
++                          message: translate('Copy'),
++                          child: Icon(
++                            Icons.copy,
++                            color: Color(0xFFDDDDDD),
++                            size: 22,
++                          ).marginOnly(right: 8, top: 4),
++                        ),
++                        onTap: () {
++                          Clipboard.setData(
++                              ClipboardData(text: model.serverPasswd.text));
++                          showToast(translate("Copied"));
++                        },
++                      ),
+                       if (showOneTime)
+                         AnimatedRotationWidget(
+                           onPressed: () => bind.mainUpdateTemporaryPassword(),
+diff --git a/src/lang/cn.rs b/src/lang/cn.rs
+index aac57d0..9648531 100644
+--- a/src/lang/cn.rs
++++ b/src/lang/cn.rs
+@@ -13,11 +13,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("Service is running", "服务正在运行"),
+         ("Service is not running", "服务未运行"),
+         ("not_ready_status", "未就绪，请检查网络连接"),
+-        ("Control Remote Desktop", "控制远程桌面"),
+-        ("Transfer file", "传输文件"),
++        ("Control Remote Desktop", "远程控制设备"),
++        ("Transfer file", "文件传输"),
+         ("Connect", "连接"),
+-        ("Recent sessions", "最近访问过"),
+-        ("Address book", "地址簿"),
++        ("Copy", "复制"),
++        ("Recent sessions", "最近连接"),
++        ("Address book", "设备列表"),
+         ("Confirmation", "确认"),
+         ("TCP tunneling", "TCP 隧道"),
+         ("Remove", "删除"),
+@@ -183,7 +184,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("Relayed and encrypted connection", "加密中继连接"),
+         ("Direct and unencrypted connection", "非加密直连"),
+         ("Relayed and unencrypted connection", "非加密中继连接"),
+-        ("Enter Remote ID", "输入对方 ID"),
++        ("Enter Remote ID", "输入设备代码"),
+         ("Enter your password", "输入密码"),
+         ("Logging in...", "正在登录..."),
+         ("Enable RDP session sharing", "允许 RDP 会话共享"),
+@@ -392,7 +393,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("Accept sessions via click", "只允许点击访问"),
+         ("Accept sessions via both", "允许密码或点击访问"),
+         ("Please wait for the remote side to accept your session request...", "请等待对方接受你的连接..."),
+-        ("One-time Password", "一次性密码"),
++        ("One-time Password", "临时密码"),
+         ("Use one-time password", "使用一次性密码"),
+         ("One-time password length", "一次性密码长度"),
+         ("Request access to your device", "请求访问你的设备"),
+@@ -401,7 +402,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("wayland_experiment_tip", "Wayland 支持处于实验阶段，如果你需要使用无人值守访问，请使用 X11。"),
+         ("Right click to select tabs", "右键选择选项卡"),
+         ("Skipped", "已跳过"),
+-        ("Add to address book", "添加到地址簿"),
++        ("Add to address book", "添加到设备列表"),
+         ("Group", "小组"),
+         ("Search", "搜索"),
+         ("Closed manually by web console", "被 web 控制台手动关闭"),
+@@ -459,7 +460,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("empty_recent_tip", "无最近会话，是时候开始新会话了！"),
+         ("empty_favorite_tip", "还没有收藏的被控端？找一个人连接并将其添加到收藏吧！"),
+         ("empty_lan_tip", "情况不妙，似乎未发现任何被控端！"),
+-        ("empty_address_book_tip", "似乎目前地址簿内无被控端"),
++        ("empty_address_book_tip", "似乎目前还没有设备"),
+         ("Empty Username", "空用户名"),
+         ("Empty Password", "空密码"),
+         ("Me", "我"),
+@@ -516,14 +517,14 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("Already exists", "已经存在"),
+         ("Change Password", "更改密码"),
+         ("Refresh Password", "刷新密码"),
+-        ("ID", "ID"),
++        ("ID", "设备代码"),
+         ("Grid View", "网格视图"),
+         ("List View", "列表视图"),
+         ("Select", "选择"),
+         ("Toggle Tags", "切换标签"),
+-        ("pull_ab_failed_tip", "获取地址簿失败"),
+-        ("push_ab_failed_tip", "上传地址簿失败"),
+-        ("synced_peer_readded_tip", "最近会话中存在的设备将会被重新同步到地址簿。"),
++        ("pull_ab_failed_tip", "获取设备列表失败"),
++        ("push_ab_failed_tip", "上传设备列表失败"),
++        ("synced_peer_readded_tip", "最近会话中存在的设备将会被重新同步到设备列表。"),
+         ("Change Color", "更改颜色"),
+         ("Primary Color", "基本色"),
+         ("HSV Color", "HSV 色"),
+@@ -584,7 +585,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
+         ("outgoing_only_desk_tip", "当前版本的软件是定制版本。\n您可以连接至其他设备，但是其他设备无法连接至您的设备。"),
+         ("preset_password_warning", "此定制版本附有预设密码。 任何知晓此密码的人都能完全控制您的设备。如果这不是您所预期的，请立即卸载此软件。"),
+         ("Security Alert", "安全警告"),
+-        ("My address book", "我的地址簿"),
++        ("My address book", "我的设备"),
+         ("Personal", "个人的"),
+         ("Owner", "所有者"),
+         ("Set shared password", "设置共享密码"),
