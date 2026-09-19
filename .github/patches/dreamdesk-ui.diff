@@ -239,3 +239,16 @@ index aac57d0..9648531 100644
          ("Personal", "个人的"),
          ("Owner", "所有者"),
          ("Set shared password", "设置共享密码"),
+diff --git a/flutter/lib/desktop/widgets/tabbar_widget.dart b/flutter/lib/desktop/widgets/tabbar_widget.dart
+index 9ef7d38..e15e8f2 100644
+--- a/flutter/lib/desktop/widgets/tabbar_widget.dart
++++ b/flutter/lib/desktop/widgets/tabbar_widget.dart
+@@ -641,7 +641,7 @@ class _DesktopTabState extends State<DesktopTab>
+                         Offstage(
+                             offstage: !showTitle,
+                             child: const Text(
+-                              "RustDesk",
++                              "DreamDesk",
+                               style: TextStyle(fontSize: 13),
+                             ).marginOnly(left: 2))
+                       ]).marginOnly(
