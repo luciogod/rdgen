@@ -43,9 +43,10 @@ env:
 
 jobs:
   setup:
-    uses: ./.github/workflows/fetch-encrypted-secrets.yml
-    with:
-      zip_url_json: ${{ inputs.zip_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup stub
+        run: echo "setup ok"
 
   generate-bridge:
     uses: ./.github/workflows/bridge.yml
@@ -83,27 +84,18 @@ jobs:
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        
-      - uses: actions/download-artifact@v4
-        with:
-          name: encrypted-secrets-zip
-
-      - name: Load Secrets
-        uses: ./.github/actions/decrypt-secrets
-        with:
-          zip_password: ${{ secrets.ZIP_PASSWORD }}
-
-      - name: Finalize and Cleanup zip/json
-        if: always() # Run even if previous steps fail
-        continue-on-error: true
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: "${{ secrets.GENURL }}/cleanzip"
-          method: 'POST'
-          customHeaders: '{"Content-Type": "application/json"}'
-          data: '{"uuid": "${{ env.uuid }}"}'
+      - name: Load custom config
+        shell: python
+        env:
+          CONFIG_JSON: ${{ secrets.RDGEN_CONFIG }}
+        run: |
+          import json, os
+          cfg = json.loads(os.environ["CONFIG_JSON"])
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              for k, v in cfg.items():
+                  if v != "" and v is not None:
+                      f.write(f"{k}={v}\n")
+          print(f"loaded {len(cfg)} config values")
 
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@v6
@@ -112,16 +104,6 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       
-      - name: Set rdgen value
-        if: ${{ env.rdgen == 'true' }}
-        run: |
-          echo "STATUS_URL=${{ secrets.GENURL }}/updategh" >> $env:GITHUB_ENV
-
-      - name: Set rdgen value
-        if: ${{ env.rdgen == 'false' }}
-        run: |
-          echo "STATUS_URL=${{ env.apiServer }}/api/updategh" >> $env:GITHUB_ENV
-
       - name: Checkout source code
         if: ${{ env.VERSION != 'master' }}
         uses: actions/checkout@v4
@@ -310,10 +292,10 @@ jobs:
           retry_wait_seconds: 15
           shell: pwsh
           command: |
-            Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/allowCustom.py -OutFile allowCustom.py
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/luciogod/rdgen/refs/heads/master/.github/patches/allowCustom.py -OutFile allowCustom.py
             python allowCustom.py
             # Remove Setup Server Tip
-            Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/removeSetupServerTip.diff -OutFile removeSetupServerTip.diff
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/luciogod/rdgen/refs/heads/master/.github/patches/removeSetupServerTip.diff -OutFile removeSetupServerTip.diff
             git apply removeSetupServerTip.diff
 
       - name: Patch remote printer port to spool file
@@ -439,7 +421,7 @@ jobs:
           retry_wait_seconds: 15
           shell: pwsh
           command: |
-            Invoke-WebRequest -Uri ${{ env.iconlink_url }}/get_png?filename=${{ env.iconlink_file }}"&"uuid=${{ env.iconlink_uuid }} -OutFile ./res/iconx.png 
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/luciogod/rdgen/refs/heads/master/.github/custom/icon.png -OutFile ./res/iconx.png
             mv ./res/icon.ico ./res/icon.ico.bak
             mv ./res/icon.png ./res/icon.png.bak
             mv ./res/tray-icon.ico ./res/tray-icon.ico.bak
@@ -487,7 +469,7 @@ jobs:
           shell: pwsh
           continue_on_error: true
           command: |
-            Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/xoffline.diff -OutFile xoffline.diff
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/luciogod/rdgen/refs/heads/master/.github/patches/xoffline.diff -OutFile xoffline.diff
             git apply xoffline.diff
 
       - name: removeNewVersionNotif
@@ -521,7 +503,7 @@ jobs:
       - name: Checkout printer-adapter crate
         uses: actions/checkout@v4
         with:
-          repository: bryangerlach/rdgen
+          repository: luciogod/rdgen
           ref: master
           path: ./temp-repo
 
@@ -592,7 +574,7 @@ jobs:
           shell: pwsh
           continue_on_error: true
           command: |
-            Invoke-WebRequest -Uri ${{ env.logolink_url }}/get_png?filename=${{ env.logolink_file }}"&"uuid=${{ env.logolink_uuid }} -OutFile ./rustdesk/data/flutter_assets/assets/logo.png
+            Invoke-WebRequest -Uri https://raw.githubusercontent.com/luciogod/rdgen/refs/heads/master/.github/custom/logo.png -OutFile ./rustdesk/data/flutter_assets/assets/logo.png
 
       - name: find Runner.res
         # Windows: find Runner.res (compiled from ./flutter/windows/runner/Runner.rc), copy to ./Runner.res
@@ -717,29 +699,15 @@ jobs:
         run: |
           mv ./SignOutput/rustdesk.msi "./SignOutput/${{ env.filename }}.msi" || echo "rustdesk"
 
-      - name: send file to rdgen server
-        if: ${{ env.rdgen == 'true' }}
-        uses: nick-fields/retry@v3
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 15
-          shell: bash
-          command: |
-            curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.exe" -F "uuid=${{ env.uuid }}" ${{ secrets.GENURL }}/save_custom_client
-            curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.msi" -F "uuid=${{ env.uuid }}" ${{ secrets.GENURL }}/save_custom_client || true
-
-      - name: send file to api server
-        if: ${{ env.rdgen == 'false' }}
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 15
-          shell: bash
-          command: |
-            curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.exe" ${{ env.apiServer }}/api/save_custom_client
-            curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.msi" ${{ env.apiServer }}/api/save_custom_client || true
+          name: DreamDesk-Windows-x64
+          path: |
+            ./SignOutput/${{ env.filename }}.exe
+            ./SignOutput/${{ env.filename }}.msi
+          if-no-files-found: warn
+          retention-days: 14
 
   cleanup:
     needs: [build-for-windows-flutter]
